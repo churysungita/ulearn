@@ -418,67 +418,96 @@ class CourseController extends Controller
         return view('instructor.course.create_curriculum', $this->data);
     }
 
+  
+
+    // error image
     public function instructorCourseImageSave(Request $request)
     {
         /**
-        * Image upload start
-        */
+         * Image upload start
+         */
         $course_id = $request->input('course_id');
         $input = $request->all();
-
+    
         if ($request->hasFile('course_image') && $request->has('course_image_base64')) {
             // Delete old files if they exist
             if (!is_null($input['old_course_image']) && Storage::exists($input['old_course_image'])) {
                 Storage::delete($input['old_course_image']);
             }
-
+    
             if (!is_null($input['old_thumb_image']) && Storage::exists($input['old_thumb_image'])) {
                 Storage::delete($input['old_thumb_image']);
             }
-
+    
             // Get filename
             $file_name = $request->file('course_image')->getClientOriginalName();
-
-            // Decode the base64 image and save it to a temporary file
-            $image_data = base64_decode($request->input('course_image_base64'));
+    
+            // Strip base64 header if present
+            $image_data_base64 = $request->input('course_image_base64');
+            if (strpos($image_data_base64, 'data:image/jpeg;base64,') === 0) {
+                $image_data_base64 = str_replace('data:image/jpeg;base64,', '', $image_data_base64);
+            }
+    
+            // Decode the base64 image
+            $image_data = base64_decode($image_data_base64);
+    
+            // Check if the decoding was successful
+            if ($image_data === false) {
+                return response()->json(['error' => 'Invalid base64 data.'], 400);
+            }
+    
+            // Check the first few bytes to ensure it's a valid JPEG file
+            $first_bytes = bin2hex(substr($image_data, 0, 4));
+            if ($first_bytes !== 'ffd8ffe0' && $first_bytes !== 'ffd8ffe1' && $first_bytes !== 'ffd8ffe2') {
+                return response()->json(['error' => 'Not a valid JPEG file.'], 400);
+            }
+    
+            // Save decoded image to a temporary file
             $temp_dir = storage_path('app/public/temp');
             if (!file_exists($temp_dir)) {
                 mkdir($temp_dir, 0777, true);
             }
             $temp_path = $temp_dir . '/' . $file_name;
             file_put_contents($temp_path, $image_data);
-
+    
             // Create path
             $path = "course/" . $course_id;
-
+            $full_path = storage_path('app/public/' . $path);
+            
+            // Ensure the directory path exists
+            if (!file_exists($full_path)) {
+                mkdir($full_path, 0777, true);
+            }
+    
             // Check if the file name already exists
             $new_file_name = SiteHelpers::checkFileName($path, $file_name);
-
+    
             // Save the main image using Spatie Image
             Image::load($temp_path)
                 ->format('jpg')
-                ->save(storage_path('app/public/' . $path . '/' . $new_file_name));
-
+                ->save($full_path . '/' . $new_file_name);
+    
             // Resize image for thumbnail
             $thumb_image = "thumb_" . $new_file_name;
             Image::load($temp_path)
                 ->width(258)
                 ->height(172)
                 ->format('jpg')
-                ->save(storage_path('app/public/' . $path . '/' . $thumb_image));
-
+                ->save($full_path . '/' . $thumb_image);
+    
             // Clean up the temporary file
             unlink($temp_path);
-
+    
             // Save the new paths in the database
             $course = Course::find($course_id);
             $course->course_image = $path . '/' . $new_file_name;
             $course->thumb_image = $path . '/' . $thumb_image;
             $course->save();
         }
-
+    
         return $this->return_output('flash', 'success', 'Course image updated successfully', 'instructor-course-image/' . $course_id, '200');
     }
+    
 
     public function instructorCourseInfoSave(Request $request)
     {

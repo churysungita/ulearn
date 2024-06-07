@@ -83,16 +83,22 @@ figure figcaption {
       <input type="hidden" name="old_thumb_image" value="{{ $course->thumb_image }}">
       <div class="row">
       
-        <div class="form-group col-md-6">
-            <!-- <label class="form-control-label">Course Image</label> -->
-            
-            <label class="cabinet center-block">
-                <figure class="course-image-container">
-<i data-toggle="tooltip" data-original-title="Delete" data-id="course_image" class="fa fa-trash remove-lp" data-content="{{ Crypt::encryptString(json_encode(array('model'=>'courses', 'field'=>'course_image', 'pid' => 'id', 'id' => $course->id, 'photo'=>$course->course_image))) }}" style="display: @if(optional($course->course_image)->isNotEmpty() && Storage::exists($course->course_image)){{ 'block' }} @else {{ 'none' }} @endif"></i>
+     <div class="form-group col-md-6">
+    <label class="cabinet center-block">
+        <figure class="course-image-container">
+            <i data-toggle="tooltip" data-original-title="Delete" data-id="course_image"
+               class="fa fa-trash remove-lp"
+               data-content="{{ Crypt::encryptString(json_encode(['model' => 'courses', 'field' => 'course_image', 'pid' => 'id', 'id' => $course->id, 'photo' => $course->course_image])) }}"
+               style="display: {{ optional($course->course_image)->isNotEmpty() && Storage::exists($course->course_image) ? 'block' : 'none' }}">
+            </i>
+            <img src="{{ optional($course->course_image)->isNotEmpty() && Storage::exists($course->course_image) ? Storage::url($course->course_image) : asset('backend/assets/images/course_detail.jpg') }}"
+                 class="gambar img-responsive"
+                 id="course_image-output"
+                 name="course_i">
+        </figure>
+    </label>
+</div>
 
-  <img src="@if(optional($course->course_image)->isNotEmpty() && Storage::exists($course->course_image)){{ Storage::url($course->course_image) }}@else{{ asset('backend/assets/images/course_detail.jpg') }}@endif" class="gambar img-responsive" id="course_image-output" name="course_i">                </figure>
-            </label>
-        </div>
 
         <div class="form-group col-md-6 pt-4">
             <span style="font-size: 10px;">

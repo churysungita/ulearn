@@ -17,7 +17,7 @@ use App\Models\Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use DB;
-use Illuminate\Support\Facades\Input;
+
 use Illuminate\Support\Facades\Storage;
 use Image;
 use SiteHelpers;
@@ -37,37 +37,41 @@ class ConfigController extends Controller
    
     public function saveConfig(Request $request)
     {
-        $files = Input::file();
-
-        //get the input values from form
+        // get the input values from form
         $input = $request->all();
         $code = $request->input('code');
 
         unset($input['_token']);
         unset($input['code']);
 
-        foreach($files as $file_key => $file_array) {
-            //delete old file
-            if (Storage::exists($input['old_'.$file_key])) {
+        // get the uploaded files
+        $files = $request->file();
+
+        foreach ($files as $file_key => $file_array) {
+            // delete old file
+            if (isset($input['old_'.$file_key]) && Storage::exists($input['old_'.$file_key])) {
                 Storage::delete($input['old_'.$file_key]);
             }
             unset($input['old_'.$file_key]);
-            //save the file in original name
+
+            // save the file with the original name
             $file_name = $request->file($file_key)->getClientOriginalName();
             // create path
             $path = "config";
 
-            //check if the file name is already exists
+            // check if the file name already exists
             $new_file_name = SiteHelpers::checkFileName($path, $file_name);
 
+            // store the file
             $path = $request->file($file_key)->storeAs($path, $new_file_name);
-            
-            //upload the image and save the image name in array, to save it in DB
+
+            // upload the image and save the image name in the array to save it in the DB
             $input[$file_key] = $path;
         }
 
-        //save the 
+        // save the configuration options
         Config::save_options($code, $input);
+
         return $this->return_output('flash', 'success', 'saved', 'back', '200');
     }
 
